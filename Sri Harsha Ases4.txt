@@ -1,0 +1,77 @@
+1.
+
+agent1.sources =source1
+agent1.sinks = sink1
+agent1.channels = channel1
+
+agent1.sources.source1.channels = channel1
+agent1.sinks.sink1.channel = channel1
+
+agent1.sources.source1.type = org.apache.flume.source.twitter.TwitterSource
+agent1.sources.source1.consumerKey = sdfghjklrtyuioghjklcvbnmfgh3456fghjghjk
+agent1.sources.source1.consumerSecret = ertydfghmnbvweruimnbvbntyu678sdf34hbn
+agent1.sources.source1.accessToken = asdfgxcvbmnbvkjhgfiuyt34598gfvbtyh87gfh
+agent1.sources.source1.accessTokenSecret = asdfghjertylkjhpoiu8xcvbnuy45ghjkjhg987j
+agent1.sources.source1.keywords = @covid19
+
+agent1.sinks.sink1.type = hdfs
+agent1.sinks.sink1.hdfs.path = /flume/twitter
+agent1.sinks.sink1.hdfs.filePrefix = events
+agent1.sinks.sink1.hdfs.fileSuffix = .log
+agent1.sinks.sink1.hdfs.inUsePrefix = _
+agent1.sinks.sink1.hdfs.fileType = DataStream
+
+agent1.channels.channel1.type = memory
+agent1.channels.channel1.capacity = 1000
+
+For starting flume:
+flume-ng agent --conf-file Twitter-to-hdfs.properties --name agent1 -Dflume.root.logger=WARN,console
+
+
+2.
+
+sqoop import -connect jdbc:mysql://localhost:3306/sqoopdemo?useSSL=false –username=root --password=password table=dummy –target-dir ‘/sri’ -m 1
+
+3.
+
+airportsPath = "hdfs:///spark/rdd/airports.csv"
+airports = sc.textFile(airportsPath)
+airports.take(2)
+airports.count()
+airports.collect()
+airports.first()
+
+4.
+
+sc
+<pyspark.context.SparkContext at 0x7f0581ba25d0>
+twitterPath = "hdfs:///spark/sql/cache-0.json"
+import json
+twitterData = sc.textFile(twitterPath).map(lambda x:json.loads(x)) 
+twitterData.take(1)
+from pyspark.sql import SQLContext,Row
+sqlC = SQLContext(sc)
+sqlC
+twitterTable = sqlC.read.json(twitterPath)
+twitterTable.registerTempTable("twitTab")
+sqlC.sql("Select text,user.screen_name from twitTab where user.screen_name='realDonaldTrump' limit 10").collect()
+
+5.
+
+from pyspark import SparkContext
+from pyspark.streaming import StreamingContext
+sc = SparkContext("local[2]","StreamingErrorCount")
+ssc = StreamingContext(sc,10)
+ssc.checkpoint("hdfs///spark/streaming")
+ds1 = ssc.socketTextStream("localhost",9999)
+count = ds1.flatMap(lambda x:x.split(" ")).filter(lambda word : "ERROR" in word).map(lambda word:(word,1)).reduceByKey(lambda x,y : x+y)
+
+count.pprint()
+ssc.start()
+ssc.awaitTermination()
+
+6.
+
+sumCount = flightsParsed.map(lambda x:x.dep_delay).aggregate((0,0),(lambda acc, value: (acc[0] + value, acc[1]+1)),(lambda acc1,acc2:(acc1[0]+acc2[0],acc1[1]+acc2[1])))
+
+avg = sumCount[0]/float(sumCount[1])
